@@ -34,7 +34,7 @@ cp tools/omp-agent-bridge/omp-agent-bridge.service ~/.config/systemd/user/
 systemctl --user enable --now omp-agent-bridge
 ```
 
-`OMP_BRIDGE_HOST` must be an address the API and worker containers can reach (a Tailscale or private address; default `127.0.0.1`, port `OMP_BRIDGE_PORT`, default 7480). `OMP_BRIDGE_PUBLIC_URL` is the HTTPS origin people open agent pages on; chat cards show only HTTPS links. Optional: `OMP_BRIDGE_MODEL` (an omp model pattern), `OMP_BRIDGE_MAX_TIME` (per run, default `2h`), `OMP_BRIDGE_MAX_RUNNING` (concurrent runs, default 4; beyond it the bridge answers 429 and Rakazo retries) and `OMP_BRIDGE_DATA` (default `~/.rakazo-omp`).
+`OMP_BRIDGE_HOST` must be an address the API and worker containers can reach (a Tailscale or private address; default `127.0.0.1`, port `OMP_BRIDGE_PORT`, default 7480). A host firewall that drops traffic from Docker networks needs that port opened on the Compose app network's bridge only, for example `ufw allow in on br-<rakazo_app network id> to any port 7480 proto tcp`. Open it on that bridge only, not on the computers' networks: anything that can reach the bridge with its token can run commands as the bridge host's user. `OMP_BRIDGE_PUBLIC_URL` is the HTTPS origin people open agent pages on; chat cards show only HTTPS links. Optional: `OMP_BRIDGE_MODEL` (an omp model pattern), `OMP_BRIDGE_MAX_TIME` (per run, default `2h`), `OMP_BRIDGE_MAX_RUNNING` (concurrent runs, default 4; beyond it the bridge answers 429 and Rakazo retries) and `OMP_BRIDGE_DATA` (default `~/.rakazo-omp`).
 
 Then configure the API and worker:
 
