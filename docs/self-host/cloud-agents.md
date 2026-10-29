@@ -20,6 +20,33 @@ The tools are `cloud_agent_launch`, `cloud_agent_status`, `cloud_agent_reply`, a
 
 Launch accepts a prompt, optional repository, images, and `openPr`. Raw environment variables are intentionally unsupported: passing secrets through model-generated tool arguments would persist them in ordinary history. Configure remote environment secrets directly with the provider.
 
+## Enable omp
+
+`CLOUD_AGENT_PROVIDER=omp` hands cloud agent work to [omp](https://github.com/can1357/oh-my-pi) coding agents on a machine you run. The omp agent bridge in `tools/omp-agent-bridge` serves the same wire format as Cursor's API, so the same client, recovery and conformance rules apply. Each agent gets its own working directory and omp session. Follow-ups resume that session, cancel stops the omp process, and the agent link opens a page showing every run's prompt, result, branch and pull request.
+
+On the host that runs omp (Bun and a signed-in `omp` on its `PATH`):
+
+```bash
+umask 077
+printf 'OMP_BRIDGE_TOKEN=%s\nOMP_BRIDGE_HOST=100.x.y.z\nOMP_BRIDGE_PUBLIC_URL=https://host.tailnet.ts.net:5174\n' "$(openssl rand -hex 32)" > ~/.config/omp-agent-bridge.env
+mkdir -p ~/.config/systemd/user
+cp tools/omp-agent-bridge/omp-agent-bridge.service ~/.config/systemd/user/
+systemctl --user enable --now omp-agent-bridge
+```
+
+`OMP_BRIDGE_HOST` must be an address the API and worker containers can reach (a Tailscale or private address; default `127.0.0.1`, port `OMP_BRIDGE_PORT`, default 7480). `OMP_BRIDGE_PUBLIC_URL` is the HTTPS origin people open agent pages on; chat cards show only HTTPS links. Optional: `OMP_BRIDGE_MODEL` (an omp model pattern), `OMP_BRIDGE_MAX_TIME` (per run, default `2h`), `OMP_BRIDGE_MAX_RUNNING` (concurrent runs, default 4; beyond it the bridge answers 429 and Rakazo retries) and `OMP_BRIDGE_DATA` (default `~/.rakazo-omp`).
+
+Then configure the API and worker:
+
+```dotenv
+CLOUD_AGENT_PROVIDER=omp
+CLOUD_AGENT_SPACE_ID=example-space-id
+OMP_AGENT_URL=http://100.x.y.z:7480
+OMP_AGENT_TOKEN=the-OMP_BRIDGE_TOKEN-value
+```
+
+omp runs with its tools auto-approved, as the bridge host's user and with that user's omp credentials, git and `gh` login. A repository task clones over HTTPS, and with `openPr` the agent pushes a branch and opens the pull request with `gh`. Restarting the bridge ends any run in progress, which then reads as failed.
+
 ## Recovery
 
 The database stores ownership and pending operations independently of chat cards. The worker and reconciler recover queue failures and interrupted launches. Cursor creates use a stable client agent ID, so retrying an accepted create does not create another remote agent.

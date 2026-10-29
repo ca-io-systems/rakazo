@@ -31,6 +31,19 @@ export function createCloudAgentConnection(
   if (kind === "emulator") {
     return { provider: new EmulatorCloudAgentProvider(), key: "emulator" };
   }
+  if (kind === "omp") {
+    const token = source.OMP_AGENT_TOKEN!.trim();
+    return {
+      // The omp agent bridge serves the Cursor v1 wire, so the same client drives it.
+      provider: new CursorCloudAgentProvider({
+        apiKey: token,
+        baseUrl: source.OMP_AGENT_URL!.trim(),
+        adapterId: "omp",
+      }),
+      key: `omp:${createHash("sha256").update(token).digest("hex")}`,
+      spaceId: source.CLOUD_AGENT_SPACE_ID!.trim(),
+    };
+  }
   if (kind !== "cursor") return null;
   const apiKey = source.CURSOR_API_KEY!.trim();
   const spaceId = source.CLOUD_AGENT_SPACE_ID!.trim();

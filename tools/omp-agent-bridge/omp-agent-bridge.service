@@ -1,0 +1,15 @@
+[Unit]
+Description=omp agent bridge for Rakazo cloud agents
+After=network-online.target
+
+[Service]
+# OMP_BRIDGE_TOKEN (required), OMP_BRIDGE_HOST, OMP_BRIDGE_PORT, OMP_BRIDGE_PUBLIC_URL,
+# OMP_BRIDGE_MODEL, OMP_BRIDGE_MAX_TIME, OMP_BRIDGE_MAX_RUNNING, OMP_BRIDGE_DATA.
+EnvironmentFile=%h/.config/omp-agent-bridge.env
+Environment=PATH=%h/.bun/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.bun/bin/bun %h/Code/rakazo/tools/omp-agent-bridge/server.ts
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

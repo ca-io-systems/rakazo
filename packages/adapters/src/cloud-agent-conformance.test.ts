@@ -82,6 +82,13 @@ describe("cloud agent composition", () => {
       { CLOUD_AGENT_PROVIDER: "bogus" },
       { CLOUD_AGENT_PROVIDER: "cursor" },
       { CLOUD_AGENT_PROVIDER: "cursor", CURSOR_API_KEY: "fake-key" },
+      { CLOUD_AGENT_PROVIDER: "omp", OMP_AGENT_TOKEN: "fake-token", CLOUD_AGENT_SPACE_ID: "s" },
+      {
+        CLOUD_AGENT_PROVIDER: "omp",
+        OMP_AGENT_URL: "http://bridge.test",
+        CLOUD_AGENT_SPACE_ID: "s",
+      },
+      { CLOUD_AGENT_PROVIDER: "omp", OMP_AGENT_URL: "http://bridge.test", OMP_AGENT_TOKEN: "t" },
     ]) {
       expect(resolveCloudAgentProvider(source)).toBe("none");
       expect(createCloudAgentConnection(source)).toBeNull();
@@ -100,6 +107,27 @@ describe("cloud agent composition", () => {
       CLOUD_AGENT_SPACE_ID: "test-space",
     })!;
     expect(rotated.key).not.toBe(connection.key);
+  });
+  it("binds an omp bridge to one Space without exposing its token", () => {
+    const source = {
+      CLOUD_AGENT_PROVIDER: "omp",
+      OMP_AGENT_URL: "http://bridge.test",
+      OMP_AGENT_TOKEN: "fake-token",
+      CLOUD_AGENT_SPACE_ID: "test-space",
+    };
+    expect(resolveCloudAgentProvider(source)).toBe("omp");
+    const connection = createCloudAgentConnection(source)!;
+    expect(connection.provider.describe().id).toBe("omp");
+    expect(cloudAgentsEnabled(connection, "test-space")).toBe(true);
+    expect(cloudAgentsEnabled(connection, "other-space")).toBe(false);
+    expect(connection.key).not.toContain("fake-token");
+    const cursor = createCloudAgentConnection({
+      CLOUD_AGENT_PROVIDER: "cursor",
+      CURSOR_API_KEY: "fake-token",
+      CLOUD_AGENT_SPACE_ID: "test-space",
+    })!;
+    // Switching vendors with the same secret must not inherit the other vendor's agents.
+    expect(connection.key).not.toBe(cursor.key);
   });
   it("never grants an unscoped live provider access", () => {
     expect(

@@ -32,6 +32,10 @@ const runSchema = z.object({
 
 export interface CursorCloudAgentOptions {
   apiKey: string;
+  /** Another server speaking the Cursor v1 wire (the omp agent bridge); default Cursor's API. */
+  baseUrl?: string;
+  /** Adapter id reported by describe(); default "cursor". */
+  adapterId?: string;
   fetch?: typeof fetch;
   timeoutMs?: number;
 }
@@ -39,19 +43,23 @@ export interface CursorCloudAgentOptions {
 /** Cursor v1 wire formats and credential handling stay inside this adapter. */
 export class CursorCloudAgentProvider implements CloudAgentProvider {
   private readonly apiKey: string;
+  private readonly baseUrl: string;
+  private readonly adapterId: string;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
 
   constructor(options: CursorCloudAgentOptions) {
     this.apiKey = options.apiKey.trim();
-    if (!this.apiKey) throw new Error("CURSOR_API_KEY is required");
+    if (!this.apiKey) throw new Error("Cloud agent API key is required");
+    this.baseUrl = (options.baseUrl ?? "https://api.cursor.com").replace(/\/+$/, "");
+    this.adapterId = options.adapterId ?? "cursor";
     this.fetchImpl = options.fetch ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 30_000;
   }
 
   describe() {
     return {
-      id: "cursor",
+      id: this.adapterId,
       contractVersion: "1",
       adapterVersion: "0.1.0",
       capabilities: { launch: true, reply: true, cancel: true, offline: false },
@@ -205,7 +213,7 @@ export class CursorCloudAgentProvider implements CloudAgentProvider {
     allowConflict = false,
   ): Promise<unknown> {
     const boundedSignal = AbortSignal.any([signal, AbortSignal.timeout(this.timeoutMs)]);
-    const response = await this.fetchImpl(`https://api.cursor.com${path}`, {
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method,
       redirect: "error",
       signal: boundedSignal,

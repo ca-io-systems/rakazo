@@ -1,5 +1,5 @@
 /**
- * Empty / unknown / cursor-without-key becomes none so the API still boots and
+ * Empty / unknown / a vendor missing its credentials becomes none so the API still boots and
  * cloud-agent tools stay uninjected.
  */
 export function resolveCloudAgentProvider(source: NodeJS.ProcessEnv = process.env): string {
@@ -11,6 +11,13 @@ export function resolveCloudAgentProvider(source: NodeJS.ProcessEnv = process.en
   if (requested === "cursor") {
     return optional(source.CURSOR_API_KEY) && optional(source.CLOUD_AGENT_SPACE_ID)
       ? "cursor"
+      : "none";
+  }
+  if (requested === "omp") {
+    return optional(source.OMP_AGENT_URL) &&
+      optional(source.OMP_AGENT_TOKEN) &&
+      optional(source.CLOUD_AGENT_SPACE_ID)
+      ? "omp"
       : "none";
   }
   // Soft-fall: do not throw at API boot for typos / future vendor names.
